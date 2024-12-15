@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Crowdfunding {
+    struct Campaign {
+        string name;
+        uint256 goal;
+        uint256 raisedAmount;
+        address payable creator;
+        bool isActive;
+    }
+
+    mapping(uint256 => Campaign) public campaigns;
+    uint256 public campaignCount = 0;
+
+    event Funded(uint256 campaignId, uint256 amount);
+
+    function createCampaign(string memory name, uint256 goal) public {
+        campaigns[campaignCount] = Campaign({
+            name: name,
+            goal: goal,
+            raisedAmount: 0,
+            creator: payable(msg.sender),
+            isActive: true
+        });
+        campaignCount++;
+    }
+
+    function fundCampaign(uint256 campaignId) public payable {
+        require(campaigns[campaignId].isActive, "Campaign is not active");
+        require(msg.value > 0, "Must send ether to fund");
+        campaigns[campaignId].raisedAmount += msg.value;
+        emit Funded(campaignId, msg.value);
+    }
+
+    function finalizeCampaign(uint256 campaignId) public {
+        Campaign storage campaign = campaigns[campaignId];
+        require(msg.sender == campaign.creator, "Only the creator can finalize");
+        require(campaign.raisedAmount >= campaign.goal, "Goal not reached");
+        campaign.creator.transfer(campaign.raisedAmount);
+        campaign.isActive = false;
+    }
+}
